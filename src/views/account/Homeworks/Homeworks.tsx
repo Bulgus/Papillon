@@ -88,17 +88,26 @@ const WeekView: Screen<"Homeworks"> = ({ route, navigation }) => {
   const firstDateEpoch = dateToEpochWeekNumber(firstDate);
 
   // Function to get the current week number since epoch
-  const getCurrentWeekNumber = () => {
+  const getWeekNumber = () => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const start = new Date(1970, 0, 0);
     start.setHours(0, 0, 0, 0);
     const diff = now.getTime() - start.getTime();
     const oneWeek = 1000 * 60 * 60 * 24 * 7;
-    return Math.floor(diff / oneWeek);
+    let weekNumber = Math.floor(diff / oneWeek);
+
+    // Check if it's Saturday (6) or Sunday (0)
+    // If so, return the following week
+    const dayOfWeek = now.getDay();
+    if (dayOfWeek === 6 || dayOfWeek === 0) {
+      weekNumber += 1;
+    }
+
+    return weekNumber;
   };
 
-  const currentWeek = getCurrentWeekNumber();
+  const currentWeek = getWeekNumber();
   const [data, setData] = useState(Array.from({ length: 100 }, (_, i) => currentWeek - 50 + i));
 
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);

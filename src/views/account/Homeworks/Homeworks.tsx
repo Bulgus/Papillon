@@ -87,7 +87,7 @@ const WeekView: Screen<"Homeworks"> = ({ route, navigation }) => {
   }
   const firstDateEpoch = dateToEpochWeekNumber(firstDate);
 
-  const getWeekNumber = (homeworks) => {
+  const getWeekNumber = (homeworks: Record<number, Homework[]>) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const currentWeekNumber = Math.floor((now.getTime() - new Date(1970, 0, 0).getTime()) / (1000 * 60 * 60 * 24 * 7));

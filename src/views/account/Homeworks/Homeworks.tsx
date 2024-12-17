@@ -173,6 +173,14 @@ const WeekView: Screen<"Homeworks"> = ({ route, navigation }) => {
   const [searchTerms, setSearchTerms] = useState("");
 
   const renderWeek: ListRenderItem<number> = ({ item }) => {
+    // Each time an item is rendered, we check whether the homework for that week exists, and if not, we fetch it
+    useEffect(() => {
+      if (!homeworks[item]) {
+        console.log(`[Homeworks]: Fetching missing data for week ${item}`);
+        updateHomeworks(true, false, false);
+      }
+    }, [item, homeworks]);
+
     const homeworksInWeek = homeworks[item] ?? [];
 
     const sortedHomework = homeworksInWeek.sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime());

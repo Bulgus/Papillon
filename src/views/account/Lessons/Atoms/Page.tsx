@@ -16,6 +16,7 @@ import { animPapillon } from "@/utils/ui/animations";
 import LessonsLoading from "./Loading";
 import MissingItem from "@/components/Global/MissingItem";
 import { getHolidayEmoji } from "@/utils/format/holidayEmoji";
+import { getDuration } from "@/utils/format/course_duration";
 
 const emoji = getHolidayEmoji();
 
@@ -23,14 +24,6 @@ const RefreshControl = createNativeWrapper(RNRefreshControl, {
   disallowInterruption: true,
   shouldCancelWhenOutside: false,
 });
-
-const lz = (num: number) => (num < 10 ? `0${num}` : num);
-
-const getDuration = (minutes: number): string => {
-  const durationHours = Math.floor(minutes / 60);
-  const durationRemainingMinutes = minutes % 60;
-  return `${durationHours} h ${lz(durationRemainingMinutes)} min`;
-};
 
 interface PageProps {
   current: boolean
@@ -40,9 +33,10 @@ interface PageProps {
   paddingTop: number
   refreshAction: () => unknown
   weekExists: boolean
+  hasServiceSetup: boolean
 }
 
-export const Page = ({ day, date, current, paddingTop, refreshAction, loading, weekExists }: PageProps) => {
+export const Page = ({ day, date, current, paddingTop, refreshAction, loading, weekExists, hasServiceSetup }: PageProps) => {
   return (
     <ScrollView
       style={{
@@ -100,7 +94,7 @@ export const Page = ({ day, date, current, paddingTop, refreshAction, loading, w
         </Reanimated.View>
       )}
 
-      {day && day.length === 0 && current && !loading && (
+      {hasServiceSetup && day && day.length === 0 && current && !loading && (
         weekExists && (new Date(date).getDay() == 6 || new Date(date).getDay() == 0) ? (
           <MissingItem
             emoji="🌴"
@@ -120,7 +114,7 @@ export const Page = ({ day, date, current, paddingTop, refreshAction, loading, w
         )
       )}
 
-      {day.length === 1 && current && !loading && (day[0].type === "vacation" ? <MissingItem
+      {hasServiceSetup && day.length === 1 && current && !loading && (day[0].type === "vacation" ? <MissingItem
         emoji={emoji}
         title="C'est les vacances !"
         description="Profite de tes vacances, à bientôt."
@@ -128,6 +122,13 @@ export const Page = ({ day, date, current, paddingTop, refreshAction, loading, w
         exiting={animPapillon(FadeOut)}
       />: <></>
       )}
+
+      {!hasServiceSetup && <MissingItem
+        title="Aucun service connecté"
+        description="Tu n'as pas encore paramétré de service pour cette fonctionnalité."
+        emoji="🤷"
+        style={{ marginTop: 16 }}
+      />}
     </ScrollView>
   );
 };

@@ -1,5 +1,5 @@
 import type { Screen } from "@/router/helpers/types";
-import { ActivityIndicator, ScrollView, TextInput } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, TextInput, TouchableOpacity } from "react-native";
 import {
   NativeIcon,
   NativeItem,
@@ -9,7 +9,6 @@ import {
 } from "@/components/Global/NativeComponents";
 import React, { useEffect, useState } from "react";
 import {
-  get_brute_logs,
   get_logs,
   Log,
   delete_logs,
@@ -18,47 +17,43 @@ import {
   CircleAlert,
   CircleX,
   Code,
-  Delete,
   Layers,
+  Trash2,
   TriangleAlert,
   Moon,
   Newspaper,
   Calendar,
   Folder,
+  X,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PressableScale } from "react-native-pressable-scale";
 import {
   FadeInDown,
-  FadeInUp,
-  FadeOutDown,
   FadeOutUp,
 } from "react-native-reanimated";
 import { animPapillon } from "@/utils/ui/animations";
-import News from "../account/News/News";
 import { useTheme } from "@react-navigation/native";
-import Reanimated from "react-native-reanimated";
+import { useAlert } from "@/providers/AlertProvider";
+import MissingItem from "@/components/Global/MissingItem";
+import formatDate from "@/utils/format/format_date_complets";
 
 const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
-  const theme = useTheme();
+  const { colors } = useTheme();
   const [logs, setLogs] = useState<Log[]>([]);
   const [searchTerms, setSearchTerms] = useState<string>("");
   const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     get_logs().then((logs) => {
-      setLogs(logs);
+      setLogs(
+        logs.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
+      );
       setLoading(false);
-    });
-
-    navigation.setOptions({
-      headerRight: (props) => (
-        <PressableScale onPress={() => delete_logs()}>
-          <Delete />
-        </PressableScale>
-      ),
     });
   }, [navigation]);
 
@@ -74,21 +69,85 @@ const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
         placeholder={"Rechercher"}
         value={searchTerms}
         onChangeText={setSearchTerms}
-        placeholderTextColor={theme.colors.text + "80"}
+        placeholderTextColor={colors.text + "80"}
         style={{
-          color: theme.colors.text,
+          color: colors.text,
           padding: 8,
           borderRadius: 80,
           fontFamily: "medium",
           fontSize: 16.5,
           flex: 1,
-          backgroundColor: theme.colors.border,
+          backgroundColor: colors.border,
           marginTop: 12,
         }}
       />
-      <NativeListHeader animated label={"Logs"} />
+      <NativeListHeader
+        animated
+        label="Logs des 2 dernières semaines"
+        trailing={
+          logs.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                if (Platform.OS === "ios") {
+                  Alert.alert(
+                    "Supprimer les logs ?",
+                    "Es-tu sûr de vouloir supprimer toutes les logs ?", [
+                      {
+                        text: "Annuler",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Supprimer",
+                        style: "destructive",
+                        onPress: () => {
+                          delete_logs();
+                          setLogs([]);
+                        },
+                      },
+                    ]
+                  );
+                } else {
+                  showAlert({
+                    title: "Supprimer les logs ?",
+                    message: "Es-tu sûr de vouloir supprimer toutes les logs ?",
+                    actions: [
+                      {
+                        title: "Annuler",
+                        onPress: () => {},
+                        backgroundColor: colors.card,
+                        icon: <X color={colors.text} />,
+                      },
+                      {
+                        title: "Supprimer",
+                        primary: true,
+                        onPress: () => {
+                          delete_logs();
+                          setLogs([]);
+                        },
+                        backgroundColor: "#CF0029",
+                        icon: <Trash2 color="#FFFFFF" />,
+                      },
+                    ],
+                  });
+                }
+              }}
+              style={{
+                padding: 5,
+                borderRadius: 100,
+                backgroundColor: colors.text + "20",
+              }}
+            >
+              <Trash2
+                size={25}
+                strokeWidth={2}
+                color="red"
+              />
+            </TouchableOpacity>
+          )
+        }
+      />
 
-      {loading && (
+      {loading ? (
         <NativeList
           animated
           entering={animPapillon(FadeInDown)}
@@ -101,9 +160,7 @@ const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
             </NativeText>
           </NativeItem>
         </NativeList>
-      )}
-
-      {logs.length !== 0 && (
+      ) : logs.length > 0 ? (
         <NativeList
           animated
           entering={animPapillon(FadeInDown)}
@@ -130,7 +187,7 @@ const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
                           <Moon />
                         ) : log.message.toLowerCase().includes("read") ? (
                           <Newspaper />
-                        ) : log.message === "[timetable:updateClasses" ? (
+                        ) : log.message.startsWith("[timetable:updateClasses") ? (
                           <Calendar />
                         ) : log.message.toLowerCase().includes("folder") ? (
                           <Folder />
@@ -151,7 +208,7 @@ const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
                                   ? "#1F618D"
                                   : log.message.toLowerCase().includes("read")
                                     ? "#D4AC02"
-                                    : log.message === "[timetable:updateClasses"
+                                    : log.message.startsWith("[timetable:updateClasses")
                                       ? "#884EA0"
                                       : log.message.toLowerCase().includes("folder")
                                         ? "#CA6F1E"
@@ -164,13 +221,31 @@ const SettingsDevLogs: Screen<"SettingsDevLogs"> = ({ navigation }) => {
                   }
                 >
                   <NativeText variant="title">{log.message}</NativeText>
-                  <NativeText variant="subtitle">{log.date}</NativeText>
+                  <NativeText variant="subtitle">
+                    {formatDate(log.date)} à {new Date(log.date).getHours()}:
+                    {new Date(log.date).getMinutes()}:
+                    {new Date(log.date).getSeconds()}
+                  </NativeText>
                   <NativeText variant="subtitle">{log.from}</NativeText>
                 </NativeItem>
               );
             }
             return null;
           })}
+        </NativeList>
+      ) : (
+        <NativeList
+          animated
+          entering={animPapillon(FadeInDown)}
+          exiting={animPapillon(FadeOutUp)}
+        >
+          <NativeItem animated style={{ paddingVertical: 10 }}>
+            <MissingItem
+              emoji="💾"
+              title="Aucune log enregistrée"
+              description="Il n'y a pas de logs à te présenter."
+            />
+          </NativeItem>
         </NativeList>
       )}
     </ScrollView>

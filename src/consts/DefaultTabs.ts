@@ -60,8 +60,15 @@ export const defaultTabs = [
   {
     tab: "Evaluation",
     label: "Compétences",
-    description: "Vos compétences et évaluations",
+    description: "Tes compétences et évaluations",
     icon: require("@/../assets/lottie/tab_evaluations.json"),
     enabled: true,
-  }
+  },
+  {
+    tab: "Week",
+    label: "Semaine",
+    description: "Vue avancée de la semaine",
+    icon: require("@/../assets/lottie/tab_calendar.json"),
+    enabled: true,
+  },
 ] as const;

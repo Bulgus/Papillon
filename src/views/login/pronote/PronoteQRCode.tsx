@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View, StyleSheet, Modal, Alert, KeyboardAvoidingView, TextInput, Pressable } from "react-native";
+import { ActivityIndicator, Text, View, StyleSheet, Modal, KeyboardAvoidingView, TextInput, Pressable } from "react-native";
 import type { Screen } from "@/router/helpers/types";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@react-navigation/native";
@@ -9,16 +9,17 @@ import * as Haptics from "expo-haptics";
 
 import PapillonShineBubble from "@/components/FirstInstallation/PapillonShineBubble";
 import ButtonCta from "@/components/FirstInstallation/ButtonCta";
-import { QrCode } from "lucide-react-native";
+import { BadgeX, QrCode } from "lucide-react-native";
 
 import Reanimated, { LinearTransition, FadeOutUp, FadeInUp } from "react-native-reanimated";
 import pronote from "pawnote";
 
 import { useAccounts, useCurrentAccount } from "@/stores/account";
 import { Account, AccountService } from "@/stores/account/types";
-import { Audio } from "expo-av";
 import defaultPersonalization from "@/services/pronote/default-personalization";
 import extract_pronote_name from "@/utils/format/extract_pronote_name";
+import useSoundHapticsWrapper from "@/utils/native/playSoundHaptics";
+import { useAlert } from "@/providers/AlertProvider";
 
 const makeUUID = (): string => {
   let dt = new Date().getTime();
@@ -43,7 +44,6 @@ const PronoteQRCode: Screen<"PronoteQRCode"> = ({ navigation }) => {
   const { colors } = theme;
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const [inputFocus, setInputFocus] = useState(false);
 
@@ -55,12 +55,21 @@ const PronoteQRCode: Screen<"PronoteQRCode"> = ({ navigation }) => {
   const codeInput = React.createRef<TextInput>();
   const [QRData, setQRData] = useState<string | null>(null);
 
+  const { playHaptics, playSound } = useSoundHapticsWrapper();
+  const LEson = require("@/../assets/sound/4.wav");
+
+  const { showAlert } = useAlert();
+
   async function loginQR () {
     setScanned(false);
     setLoadingModalVisible(true);
 
     if (QRValidationCode === "" || QRValidationCode.length !== 4) {
-      Alert.alert("Code invalide", "Entre un code à 4 chiffres.");
+      showAlert({
+        title: "Code invalide",
+        message: "Entre un code à 4 chiffres.",
+        icon: <BadgeX />,
+      });
       return;
     }
 
@@ -132,7 +141,7 @@ const PronoteQRCode: Screen<"PronoteQRCode"> = ({ navigation }) => {
         queueMicrotask(() => {
           // Reset the navigation stack to the "Home" screen.
           // Prevents the user from going back to the login screen.
-          playSound();
+          playSound(LEson);
           navigation.reset({
             index: 0,
             routes: [{ name: "AccountCreated" }],
@@ -142,33 +151,14 @@ const PronoteQRCode: Screen<"PronoteQRCode"> = ({ navigation }) => {
     } catch (error) {
       console.error(error);
 
-      Alert.alert("Erreur", "Une erreur est survenue lors de la connexion.");
+      showAlert({
+        title: "Erreur",
+        message: "Une erreur est survenue lors de la connexion.",
+        icon: <BadgeX />,
+      });
       return;
     }
   }
-
-  React.useEffect(() => {
-    const loadSound = async () => {
-      const { sound } = await Audio.Sound.createAsync(
-        require("@/../assets/sound/4.wav")
-      );
-      setSound(sound);
-    };
-
-    loadSound();
-
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, []);
-
-  const playSound = async () => {
-    if (sound) {
-      await sound.replayAsync();
-    }
-  };
 
   useEffect(() => {
     const getBarCodeScannerPermissions = async () => {
@@ -186,7 +176,9 @@ const PronoteQRCode: Screen<"PronoteQRCode"> = ({ navigation }) => {
     data: string;
   }) => {
     setScanned(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playHaptics("notification", {
+      notification: Haptics.NotificationFeedbackType.Success,
+    });
     setQRData(data);
     setPinModalVisible(true);
   };
